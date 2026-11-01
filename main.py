@@ -3,6 +3,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
+from app.state_manager import StateManager
 from ui.island import NexusIsland
 from ui.assistant_window import AssistantWindow
 
@@ -10,24 +11,42 @@ from ui.assistant_window import AssistantWindow
 class NexusApplication:
 
     def __init__(self):
+
         self.app = QApplication(sys.argv)
+        self.app.setApplicationName("NEXUS")
 
-        # Create assistant chat window
+        # Central application state
+        self.state_manager = StateManager()
+
+        # Create UI components
         self.assistant = AssistantWindow()
-
-        # Create floating island
         self.island = NexusIsland()
 
-        # Connect island to assistant
+        # Connect floating island and chat
         self.island.set_assistant(self.assistant)
 
-        # Show floating island
+        # Connect shared state manager
+        self.island.set_state_manager(
+            self.state_manager
+        )
+
+        self.assistant.set_state_manager(
+            self.state_manager
+        )
+
+        # Start NEXUS
         self.island.show()
 
+        print("================================")
+        print("       NEXUS INITIALIZED")
+        print("       SYSTEM READY")
+        print("================================")
+
     def run(self):
-        sys.exit(self.app.exec())
+        return self.app.exec()
 
 
 if __name__ == "__main__":
+
     nexus = NexusApplication()
-    nexus.run()
+    sys.exit(nexus.run())

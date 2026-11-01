@@ -1,10 +1,6 @@
 
-import sys
-
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QApplication,
     QWidget,
     QLabel,
     QVBoxLayout,
@@ -21,6 +17,8 @@ class AssistantWindow(QWidget):
 
     def __init__(self):
         super().__init__()
+
+        self.state_manager = None
 
         self.setWindowTitle("NEXUS Assistant")
         self.resize(650, 720)
@@ -95,7 +93,7 @@ class AssistantWindow(QWidget):
         header_text.addWidget(title)
         header_text.addWidget(subtitle)
 
-        self.connection_status = QLabel("● UI MODE")
+        self.connection_status = QLabel("● SYSTEM READY")
         self.connection_status.setStyleSheet(
             "color: #00E5B0; font-size: 10px;"
         )
@@ -112,66 +110,130 @@ class AssistantWindow(QWidget):
         divider.setStyleSheet(
             "color: #26334D; background: #26334D; max-height: 1px;"
         )
+
         self.main_layout.addWidget(divider)
 
-        # Scrollable chat area
+        # Chat area
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
 
         self.chat_container = QWidget()
-        self.chat_layout = QVBoxLayout(self.chat_container)
+
+        self.chat_layout = QVBoxLayout(
+            self.chat_container
+        )
+
         self.chat_layout.setAlignment(
             Qt.AlignmentFlag.AlignTop
         )
+
         self.chat_layout.setSpacing(14)
 
         self.scroll.setWidget(self.chat_container)
+
         self.main_layout.addWidget(self.scroll, 1)
 
         # Welcome message
         self.add_message(
             "NEXUS",
-            "Hello! I'm NEXUS. My interface is ready. "
-            "My AI brain will be connected in a later milestone.",
+            "Hello! I'm NEXUS. My interface and shared "
+            "application state are ready. My AI engine "
+            "will be connected in a later milestone.",
             False
         )
 
-        # Input section
+        # Input
         input_layout = QHBoxLayout()
-        input_layout.setSpacing(10)
 
         self.message_input = QLineEdit()
+
         self.message_input.setPlaceholderText(
             "Message NEXUS..."
         )
+
         self.message_input.returnPressed.connect(
             self.send_message
         )
 
         send_button = QPushButton("SEND")
-        send_button.clicked.connect(self.send_message)
+        send_button.clicked.connect(
+            self.send_message
+        )
 
         input_layout.addWidget(self.message_input, 1)
         input_layout.addWidget(send_button)
 
         self.main_layout.addLayout(input_layout)
 
+        # Footer
         footer = QLabel(
             "NEXUS DEVELOPMENT BUILD  •  AI NOT CONNECTED"
         )
+
         footer.setAlignment(
             Qt.AlignmentFlag.AlignCenter
         )
-        footer.setStyleSheet(
-            "color: #65748F; font-size: 9px; letter-spacing: 1px;"
-        )
+
+        footer.setStyleSheet("""
+            color: #65748F;
+            font-size: 9px;
+            letter-spacing: 1px;
+        """)
 
         self.main_layout.addWidget(footer)
 
+    # Connect shared state
+    def set_state_manager(self, state_manager):
+
+        self.state_manager = state_manager
+
+        self.state_manager.status_changed.connect(
+            self.update_connection_status
+        )
+
+        self.state_manager.notification_received.connect(
+            self.receive_notification
+        )
+
+        self.update_connection_status(
+            self.state_manager.get_status()
+        )
+
+    # Update status display
+    def update_connection_status(self, status):
+
+        self.connection_status.setText(
+            "● " + status
+        )
+
+        if status == "ERROR":
+            color = "#FF5555"
+        elif status == "OFFLINE":
+            color = "#FFB347"
+        elif status in ("THINKING...", "RESPONDING..."):
+            color = "#B28DFF"
+        else:
+            color = "#00E5B0"
+
+        self.connection_status.setStyleSheet(
+            f"color: {color}; font-size: 10px;"
+        )
+
+    # Receive notifications
+    def receive_notification(self, message):
+
+        self.add_message(
+            "NEXUS NOTIFICATION",
+            message,
+            False
+        )
+
+    # Add chat message
     def add_message(self, sender, message, is_user):
 
         bubble = QFrame()
         bubble.setMaximumWidth(450)
+
         bubble.setSizePolicy(
             QSizePolicy.Policy.Preferred,
             QSizePolicy.Policy.Minimum
@@ -199,6 +261,7 @@ class AssistantWindow(QWidget):
         bubble_layout.setSpacing(5)
 
         sender_label = QLabel(sender)
+
         sender_label.setStyleSheet("""
             color: #00D9FF;
             font-size: 10px;
@@ -209,9 +272,11 @@ class AssistantWindow(QWidget):
 
         message_label = QLabel(message)
         message_label.setWordWrap(True)
+
         message_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
+
         message_label.setStyleSheet("""
             color: #EDF4FF;
             font-size: 13px;
@@ -237,6 +302,7 @@ class AssistantWindow(QWidget):
             self.scroll.verticalScrollBar().maximum()
         )
 
+    # Send user message
     def send_message(self):
 
         message = self.message_input.text().strip()
@@ -247,7 +313,6 @@ class AssistantWindow(QWidget):
         self.add_message("YOU", message, True)
         self.message_input.clear()
 
-        # Temporary response: real AI comes in M3.
         self.add_message(
             "NEXUS",
             "I received your message! My AI engine "
@@ -255,13 +320,3 @@ class AssistantWindow(QWidget):
             "when we reach M3.",
             False
         )
-
-
-if __name__ == "__main__":
-
-    app = QApplication(sys.argv)
-
-    window = AssistantWindow()
-    window.show()
-
-    sys.exit(app.exec())
